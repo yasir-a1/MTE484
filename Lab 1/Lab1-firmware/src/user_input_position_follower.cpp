@@ -9,11 +9,12 @@ int BAL_PIN = A1;   // ball position sensor
 const float MAX_ANGLE = PI / 4.0f;   // +45 degrees = +0.7854 rad
 const float MIN_ANGLE = -PI / 4.0f;  // -45 degrees = -0.7854 rad
 
-const float TOLERANCE = 0.035f;      // radians
+const float TOLERANCE = 0.075f;      // radians
 const float MOTOR_VOLTAGE = 0.5f;    // volts
 
 // ================== Target ==================
 volatile float target_angle = 0.0f;
+volatile float motor_voltage = 0.0f;
 
 
 // ================== Setup ==================
@@ -89,37 +90,38 @@ void interval_control_code(void) {
   // Motor is within tolerance
   if (fabs(error) <= TOLERANCE) {
 
-    setMotorVoltage(0.0f);
+    motor_voltage = 0.0f;
 
   }
 
   // Motor needs to move in positive direction
   else if (error > 0.0f) {
 
-    setMotorVoltage(-0.5f);
+    motor_voltage = -0.5f;
 
   }
 
   // Motor needs to move in negative direction
   else {
 
-    setMotorVoltage(0.5f);
+    motor_voltage = 0.5f;
 
   }
 
+  setMotorVoltage(motor_voltage);
 
   // -------- Serial Output --------
-  Serial.print("Target: ");
+  Serial.print("Target Angle: ");
   Serial.print(target_angle, 4);
 
-  Serial.print(" rad, Motor: ");
+  Serial.print(" rad, Motor Angle: ");
   Serial.print(motor_angle, 4);
 
-  Serial.print(" rad, Error: ");
+  Serial.print(" rad, Error Angle: ");
   Serial.print(error, 4);
 
-  Serial.print(" rad, Ball: ");
-  Serial.println(ball);
+  Serial.print(" rad, Motor Voltage: ");
+  Serial.println(motor_voltage);
 
 
   digitalWrite(A5, LOW);
