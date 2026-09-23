@@ -7,6 +7,7 @@
 
 const int MOT_PIN = A0;   // Motor angle potentiometer
 
+const float MAX_MOTOR_VOLTAGE = 5.95f;
 
 // ======================================================
 // SAMPLING
@@ -248,113 +249,122 @@ void loop() {
 
 void interval_control_code(void) {
 
-  digitalWrite(A5, HIGH);
+    digitalWrite(A5, HIGH);
 
 
-  // ==================================================
-  // 1. GENERATE SQUARE-WAVE REFERENCE
-  // ==================================================
+    // ==================================================
+    // 1. GENERATE SQUARE-WAVE REFERENCE
+    // ==================================================
 
-  // Number of samples in HALF a square-wave period
+    // Number of samples in HALF a square-wave period
 
-  const unsigned long HALF_PERIOD_SAMPLES =
-      (unsigned long)(
-          (SQUARE_WAVE_PERIOD_S / 2.0f)
-          / SAMPLE_PERIOD_S
-      );
+    const unsigned long HALF_PERIOD_SAMPLES =
+        (unsigned long)(
+            (SQUARE_WAVE_PERIOD_S / 2.0f)
+            / SAMPLE_PERIOD_S
+        );
 
 
-  // Alternate between REF_LOW and REF_HIGH
+    // Alternate between REF_LOW and REF_HIGH
 
-  if (
-      (sample_count / HALF_PERIOD_SAMPLES) % 2 == 0
-  ) {
+    if (
+        (sample_count / HALF_PERIOD_SAMPLES) % 2 == 0
+    ) {
 
     target_angle = REF_LOW;
 
-  }
+    }
 
-  else {
+    else {
 
     target_angle = REF_HIGH;
 
-  }
+    }
 
 
-  // ==================================================
-  // 2. READ MOTOR SENSOR
-  // ==================================================
+    // ==================================================
+    // 2. READ MOTOR SENSOR
+    // ==================================================
 
-  motor_raw = analogRead(MOT_PIN);
-
-
-  // Convert ADC reading to radians
-
-  motor_angle =
-      MOTOR_SCALE *
-      ((float)motor_raw - MOTOR_ZERO);
+    motor_raw = analogRead(MOT_PIN);
 
 
-  // ==================================================
-  // 3. CALCULATE POSITION ERROR
-  // ==================================================
+    // Convert ADC reading to radians
 
-  error_angle =
-      target_angle - motor_angle;
-
-
-  // ==================================================
-  // 4. PROPORTIONAL CONTROLLER
-  // ==================================================
-
-  // Vc = Kp * error
-
-  controller_voltage =
-      KP * error_angle;
+    motor_angle =
+        MOTOR_SCALE *
+        ((float)motor_raw - MOTOR_ZERO);
 
 
-  // ==================================================
-  // 5. STICTION COMPENSATION
-  // ==================================================
+    // ==================================================
+    // 3. CALCULATE POSITION ERROR
+    // ==================================================
 
-  if (controller_voltage > 0.0f) {
+    error_angle =
+        target_angle - motor_angle;
+
+
+    // ==================================================
+    // 4. PROPORTIONAL CONTROLLER
+    // ==================================================
+
+    // Vc = Kp * error
+
+    controller_voltage =
+        KP * error_angle;
+
+
+    // ==================================================
+    // 5. STICTION COMPENSATION
+    // ==================================================
+
+    if (controller_voltage > 0.0f) {
 
     motor_voltage =
         controller_voltage
         + STICTION_POSITIVE;
 
-  }
+    }
 
-  else if (controller_voltage < 0.0f) {
+    else if (controller_voltage < 0.0f) {
 
     motor_voltage =
         controller_voltage
         - STICTION_NEGATIVE;
 
-  }
+    }
 
-  else {
+    else {
 
     motor_voltage = 0.0f;
 
-  }
+    }
 
 
-  // ==================================================
-  // 6. APPLY MOTOR VOLTAGE
-  // ==================================================
+    // ==================================================
+    // 6. APPLY MOTOR VOLTAGE
+    // ==================================================
 
-  setMotorVoltage(motor_voltage);
+    if (motor_voltage > MAX_MOTOR_VOLTAGE) {
+        motor_voltage = MAX_MOTOR_VOLTAGE;
+    }
 
-
-  // ==================================================
-  // 7. UPDATE SAMPLE COUNTER
-  // ==================================================
-
-  sample_count++;
-
-  sample_ready = true;
+    else if (motor_voltage < -MAX_MOTOR_VOLTAGE) {
+        motor_voltage = -MAX_MOTOR_VOLTAGE;
+    }
 
 
-  digitalWrite(A5, LOW);
+    setMotorVoltage(motor_voltage);
+
+
+    // ==================================================
+    // 7. UPDATE SAMPLE COUNTER
+    // ==================================================
+
+    sample_count++;
+
+    sample_ready = true;
+
+
+    digitalWrite(A5, LOW);
 }
